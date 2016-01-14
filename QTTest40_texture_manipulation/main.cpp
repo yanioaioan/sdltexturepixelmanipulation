@@ -10,8 +10,8 @@ and may not be redistributed without written permission.*/
 #include <string>
 
 //Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 2000;
+const int SCREEN_HEIGHT = 2000;
 TTF_Font *gFont;
 
 
@@ -30,7 +30,7 @@ class LTexture
 
         #ifdef _SDL_TTF_H
         //Creates image from font string
-        bool loadFromRenderedText( std::string textureText, SDL_Color textColor );
+        bool loadFromRenderedText(std::string textureText, SDL_Color textColor , int x, int y);
         #endif
 
         //Deallocates texture
@@ -60,9 +60,11 @@ class LTexture
         void* getPixels();
         int getPitch();
 
-    private:
         //The actual hardware texture
         SDL_Texture* mTexture;
+
+    private:
+
         void* mPixels;
         int mPitch;
 
@@ -89,6 +91,7 @@ SDL_Renderer* gRenderer = NULL;
 //Scene textures
 LTexture gFooTexture;
 SDL_Surface* formattedSurface;
+SDL_Surface* gScreenSurface;
 LTexture::LTexture()
 {
     //Initialize
@@ -119,10 +122,8 @@ bool LTexture::loadFromFile( std::string path )
         printf( "Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError() );
     }
     else
-    {
+    {       
         //Convert surface to display format
-
-
 
 //        formattedSurface = SDL_ConvertSurface( loadedSurface,  SDL_GetWindowSurface(gWindow)->format, NULL );
         formattedSurface = SDL_ConvertSurfaceFormat( loadedSurface, SDL_PIXELFORMAT_ARGB8888, NULL );
@@ -172,47 +173,30 @@ bool LTexture::loadFromFile( std::string path )
 }
 
 
-//// TTF_Init() must be called before using this function.
-//// Remember to call TTF_Quit() when done.
-//void drawText(SDL_Surface* screen,
-//char* string,
-//int size,
-//int x, int y,
-//int fR, int fG, int fB,
-//int bR, int bG, int bB)
-//{
-//TTF_Font* font = TTF_OpenFont("ARIAL.TTF", size);
-//SDL_Color foregroundColor = { fR, fG, fB };
-//SDL_Color backgroundColor = { bR, bG, bB };
-//SDL_Surface* textSurface = TTF_RenderText_Shaded(font, string,foregroundColor, backgroundColor);
-//SDL_Rect textLocation = { x, y, 0, 0 };
-//SDL_BlitSurface(textSurface, NULL, screen, &textLocation);
-//SDL_FreeSurface(textSurface);
-//TTF_CloseFont(font);
-//}
 
 
 #ifdef _SDL_TTF_H
-bool LTexture::loadFromRenderedText( std::string textureText, SDL_Color textColor )
+bool LTexture::loadFromRenderedText( std::string textureText, SDL_Color textColor,int x, int y )
 {
+
     /*Create 100 surfaces blit one to the existing one*/
 
     //Get rid of preexisting texture
-    free();
+//    free();
 
      gFont = TTF_OpenFont("arial.ttf", 10);
     //Render text surface
 
      SDL_Surface* textSurface;
-     for(int i=0;i<10;i++)
+//     for(int i=0;i<100;i++)
      {
      textSurface = TTF_RenderText_Solid( gFont, textureText.c_str(), textColor );
 //    SDL_Surface* textSurface = TTF_RenderText_Blended_Wrapped(gFont, textureText.c_str(), textColor ,300);
 
-    SDL_Rect textLocation = { i, i, 10, 10 };
-    SDL_BlitSurface(textSurface, NULL, formattedSurface, &textLocation);
+        SDL_Rect textLocation = { x, y, 8, 10 };
+    //SDL_BlitSurface(textSurface, NULL, formattedSurface, &textLocation);
 
-     }
+
 
 
 
@@ -231,16 +215,33 @@ bool LTexture::loadFromRenderedText( std::string textureText, SDL_Color textColo
             //Get image dimensions
             mWidth = textSurface->w;
             mHeight = textSurface->h;
+
+
+            SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+
+            //do not clear the screen
+//            SDL_RenderClear( gRenderer );
+
+            SDL_SetTextureColorMod(mTexture,textColor.r,textColor.g,textColor.b);
+            SDL_RenderCopy(gRenderer,mTexture, NULL, /*&charLocation*/  &textLocation);
+
+
+
         }
 
-        //Get rid of old surface
-        SDL_FreeSurface( textSurface );
+
     }
     else
     {
         printf( "Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError() );
     }
 
+
+
+     }
+    TTF_CloseFont(gFont);
+    //Get rid of old surface
+    SDL_FreeSurface( textSurface );
 
     //Return success
     return mTexture != NULL;
@@ -279,10 +280,10 @@ void LTexture::setAlpha( Uint8 alpha )
     SDL_SetTextureAlphaMod( mTexture, alpha );
 }
 
-void LTexture::update()
-{
-    SDL_UpdateTexture((SDL_Texture*)this, NULL, formattedSurface->pixels, formattedSurface->pitch);
-}
+//void LTexture::update()
+//{
+//    SDL_UpdateTexture((SDL_Texture*)this, NULL, formattedSurface->pixels, formattedSurface->pitch);
+//}
 
 void LTexture::render( int x, int y, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip )
 {
@@ -396,6 +397,7 @@ bool init()
         }
         else
         {
+
             //Create renderer for window
             gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
             if( gRenderer == NULL )
@@ -527,7 +529,7 @@ bool loadMedia()
 
 
     //Load foo' texture
-    if( !gFooTexture.loadFromFile( "foo.png" ) )
+    if( !gFooTexture.loadFromFile( "antipaxoi.png" ) )
     {
         printf( "Failed to load corner texture!\n" );
         success = false;
@@ -566,24 +568,28 @@ bool loadMedia()
 
             //Averagine by block
             //Color key pixels
-            int powerof2=powerof(2,6);//for a formattedSurface->w/64 block pixel width this should produce 8 blocks of 8 pixels
+            int powerof2=powerof(2,10);//for a formattedSurface->w/64 block pixel width this should produce 8 blocks of 8 pixels
             int block_width=formattedSurface->w/powerof2;
             int block_height=formattedSurface->h/powerof2;
 
             std::string blockCharacterString;
+            //For each block every block_width pixels
             for(size_t bx = block_width; bx <= formattedSurface->w;  bx += block_width)
             {
-
+                //For each block every block_height pixels
                 for(size_t by = block_height; by <= formattedSurface->h; by += block_height)
                 {
 
+                    //total sum of Red,Green,Blue channel values
                     float sumR=0;
                     float sumG=0;
                     float sumB=0;
 
+                    //CurrentPixel
                     Uint32 pixel;
 
-                    int counter=0;
+                    int blockPixelcounter=0;
+                    //For each block every block_height pixels
                     for(size_t x = bx-block_width; x < bx; x++)
                     {
                         for(size_t y = by-block_height; y < by; y++)
@@ -600,15 +606,16 @@ bool loadMedia()
                             sumR=sumR+red;
                             sumG=sumG+green;
                             sumB= sumB+blue;
-                            counter++;
+                            blockPixelcounter++;
 
 
                         }
 
                     }//square block end
 
+
                     //get the average chanel color
-                    int avR=sumR/counter; int avG=sumG/counter; int avB=sumB/counter;
+                    int avR=sumR/blockPixelcounter; int avG=sumG/blockPixelcounter; int avB=sumB/blockPixelcounter;
 
                     //Gray Scale it - based on each rgb value
 //                    Uint8 v = 0.212671f * red  + 0.715160f * green  + 0.072169f * blue;
@@ -619,12 +626,13 @@ bool loadMedia()
 
 
 
-                    /*instead of modifying pixel in the line above,
+                    /*
+                     * instead of modifying pixel in the line above,
                       we can query the character which is going to replace this block based
                       on the average grayscale value of the 3 R,G,B channels
                      */
                     int avRGBValue=(avR+avG+avB)/3;
-                    blockCharacterString+=getGrayShade(avRGBValue);
+//                    blockCharacterString+=getGrayShade(avRGBValue);
 
 
 
@@ -635,9 +643,8 @@ bool loadMedia()
 //                        for(size_t y = by-block_height; y < by; y++)
 //                        {
 //                            //manually change the color of the pixel
-////                                    pixel = (0xFF << 24) | (red << 16) | (green << 8) | blue;
+//                                    pixel = (0xFF << 24) | (red << 16) | (green << 8) | blue;
 //                            pixels [(formattedSurface->w* y)+x ] = pixel;
-
 //                        }
 
 //                    }//square block end replacing values
@@ -649,29 +656,42 @@ bool loadMedia()
 //                            pixels [(gFooTexture.getWidth()* by)+bx ] = 255;
 
 
-//
+                    //Create a texture (appropriate chosen character, appropriately colored) for each block of pixels at bx,by to be replaced
+                    SDL_Color AV_BLOCK_COLOR = {avR,avG,avB};
 
+                    /*
+                     * and now we can create a texture of the characters in the blockCharacterString
+                     */
+                    gFooTexture.loadFromRenderedText(getGrayShade(avRGBValue),AV_BLOCK_COLOR,bx,by);
 
                 }
-                //when we reach the end of each row of pixels we add a new line \n
-                blockCharacterString+="\n";
 
+                //when we reach the end of each row of pixels we add a new line \n
+                //blockCharacterString+="\n";
+
+                //Render Current width offset
+                SDL_RenderPresent(gRenderer);
             }
 
+            //At the end. Get pixels of the surface associated with the gRenderer (formattedSurface)
+            //save the image
+            Uint32 * finaltexturePixels = (Uint32 *)formattedSurface->pixels;
+            SDL_RenderReadPixels(gRenderer, &formattedSurface->clip_rect, formattedSurface->format->format, finaltexturePixels, formattedSurface->w * formattedSurface->format->BytesPerPixel);
+            SDL_Surface* saveSurface = SDL_CreateRGBSurfaceFrom(finaltexturePixels, formattedSurface->w, formattedSurface->h,
+                                                                formattedSurface->format->BitsPerPixel,
+                                                                formattedSurface->w * formattedSurface->format->BytesPerPixel,
+                                                                formattedSurface->format->Rmask, formattedSurface->format->Gmask,
+                                                                formattedSurface->format->Bmask, formattedSurface->format->Amask);
 
-            //Unlock texture
+
+            SDL_SaveBMP(saveSurface, "MYASCIICOLOREDIMAGE.bmp");
+
+
             //Get rid of old formatted surface
-
-            gFooTexture.unlockTexture();
-
-
-
-            SDL_Color RED = {255,0,0};
-            /*and now we can create a texture of the characters in the blockCharacterString*/
-            gFooTexture.loadFromRenderedText("blockCharacterString",RED);
-
             SDL_FreeSurface( formattedSurface );
 
+            //Unlock texture
+            gFooTexture.unlockTexture();
         }
     }
 
@@ -733,16 +753,16 @@ int main( int argc, char* args[] )
                     }
                 }
 
-//                //Clear screen
-                SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+//                Clear screen
+//                SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 
-                SDL_RenderClear( gRenderer );
+//                SDL_RenderClear( gRenderer );
 
 //                //Render stick figure
-                gFooTexture.render( ( SCREEN_WIDTH - gFooTexture.getWidth() ) / 2, ( SCREEN_HEIGHT - gFooTexture.getHeight() ) / 2 );
+//                gFooTexture.render( ( SCREEN_WIDTH - gFooTexture.getWidth() ) / 2, ( SCREEN_HEIGHT - gFooTexture.getHeight() ) / 2 );
 
 //                //Update screen
-                SDL_RenderPresent( gRenderer );
+//                SDL_RenderPresent( gRenderer );
             }
         }
     }
