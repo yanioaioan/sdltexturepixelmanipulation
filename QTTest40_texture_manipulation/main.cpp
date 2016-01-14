@@ -478,7 +478,7 @@ std::string getGrayShade(int avRGBVal)
 
     if (avRGBVal >= 225)
     {
-        asciichar = " ";
+        asciichar = "`";
     }
     else if (avRGBVal >= 200)
     {
@@ -568,7 +568,7 @@ bool loadMedia()
 
             //Averagine by block
             //Color key pixels
-            int powerof2=powerof(2,10);//for a formattedSurface->w/64 block pixel width this should produce 8 blocks of 8 pixels
+            int powerof2=powerof(2,9);//for a formattedSurface->w/64 block pixel width this should produce 8 blocks of 8 pixels
             int block_width=formattedSurface->w/powerof2;
             int block_height=formattedSurface->h/powerof2;
 
